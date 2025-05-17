@@ -57,4 +57,19 @@ const medicationDispenseSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Add pre-save hook to calculate total cost
+medicationDispenseSchema.pre('save', async function(next) {
+  if (this.isModified('medications')) {
+    const meds = await Medication.find({
+      _id: { $in: this.medications.map(m => m.medicationId) }
+    });
+    
+    this.totalCost = this.medications.reduce((total, item) => {
+      const med = meds.find(m => m._id.equals(item.medicationId));
+      return total + (med?.price || 0) * item.quantity;
+    }, 0);
+  }
+  next();
+});
+
 export const MedicationDispense = mongoose.model('MedicationDispense', medicationDispenseSchema);

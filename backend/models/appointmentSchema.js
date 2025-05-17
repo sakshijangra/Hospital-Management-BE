@@ -43,7 +43,7 @@ const appointmentSchema = new mongoose.Schema({
         enum: ["Male", "Female", "Others", "Prefer not to say"],
         default: "Male"
       },
-      appintmentDate : {
+      appointmentDate : {
         type : String,
         required : true
       },
@@ -77,11 +77,11 @@ const appointmentSchema = new mongoose.Schema({
         type : String, 
         required : true
       },
-      status : {
-        type : String,
-        enum : ["Pending", "Accepted", "Rejected"],
-        default : "Pending"
-      }
+      status: {
+  type: String,
+  enum: ["Pending", "Accepted", "Rejected", "Completed", "Cancelled", "Rescheduled"],
+  default: "Pending"
+}
 })
 
 // Enhanced appointment model with waiting time calculations
