@@ -224,3 +224,132 @@ export const logoutDoctor = catchAsyncError(async (req, res, next) => {
         message: "Doctor logged out successfully",
     });
 });
+
+// controller/doctorController.js additions
+
+export const getDoctorDashboardStats = catchAsyncError(async (req, res, next) => {
+  const doctorId = req.user._id;
+  const today = new Date();
+  const startOfToday = new Date(today.setHours(0, 0, 0, 0));
+  const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+  
+  // Get today's appointments
+  const todayAppointments = await Appointment.find({
+    doctorId,
+    appointmentDate: {
+      $gte: startOfToday,
+      $lte: endOfToday
+    }
+  }).populate('patientId', 'firstName lastName gender dob');
+  
+  // Get pending appointments
+  const pendingAppointments = await Appointment.find({
+    doctorId,
+    status: 'Pending'
+  }).count();
+  
+  // Get recent patients (last 7 days)
+  const recentPatientsDate = new Date();
+  recentPatientsDate.setDate(recentPatientsDate.getDate() - 7);
+  
+  const recentPatients = await Appointment.find({
+    doctorId,
+    hasVisited: true,
+    updatedAt: { $gte: recentPatientsDate }
+  }).distinct('patientId');
+  
+  // Get pending prescriptions
+  const pendingPrescriptions = await Prescription.find({
+    doctorId,
+    createdAt: { $gte: recentPatientsDate }
+  }).count();
+  
+  res.status(200).json({
+    success: true,
+    todayAppointments,
+    stats: {
+      todayAppointmentCount: todayAppointments.length,
+      pendingAppointments,
+      recentPatientCount: recentPatients.length,
+      pendingPrescriptions
+    }
+  });
+});
+
+// controller/doctorController.js additions
+
+export const generatePrescription = catchAsyncError(async (req, res, next) => {
+  const { patientId, appointmentId, diagnosis, medicationIds, instructions, followUpDate } = req.body;
+  
+  const doctorId = req.user._id;
+  
+  if (!patientId || !appointmentId || !diagnosis || !medicationIds || medicationIds.length === 0) {
+    return next(new ErrorHandler("Please provide all required fields", 400));
+  }
+  
+  // Verify appointment exists and belongs to this doctor
+  const appointment = await Appointment.findOne({
+    _id: appointmentId,
+    doctorId,
+    patientId
+  });
+  
+  if (!appointment) {
+    return next(new ErrorHandler("Appointment not found or not authorized", 404));
+  }
+  
+  // Get medication details
+  const medications = [];
+  for (const med of medicationIds) {
+    const medication = await Medication.findById(med.id);
+    if (!medication) {
+      return next(new ErrorHandler(`Medication with ID ${med.id} not found`, 404));
+    }
+    
+    medications.push({
+      name: medication.name,
+      dosage: med.dosage || medication.strength.value + " " + medication.strength.unit,
+      frequency: med.frequency || "As needed",
+      duration: med.duration || "7 days"
+    });
+  }
+  
+  // Create prescription
+  const prescription = await Prescription.create({
+    patientId,
+    doctorId,
+    appointmentId,
+    diagnosis,
+    medications,
+    instructions,
+    followUpDate
+  });
+  
+  // Update appointment status
+  await Appointment.findByIdAndUpdate(
+    appointmentId,
+    { 
+      status: "Completed",
+      hasVisited: true
+    }
+  );
+  
+  // Create medication dispense record
+  const medicationDispense = await MedicationDispense.create({
+    prescriptionId: prescription._id,
+    patientId,
+    medications: medicationIds.map(med => ({
+      medicationId: med.id,
+      quantity: med.quantity || 1,
+      instructions: med.instructions || ""
+    })),
+    status: 'Pending'
+  });
+  
+  res.status(201).json({
+    success: true,
+    message: "Prescription generated successfully",
+    prescription,
+    medicationDispense
+  });
+});

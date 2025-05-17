@@ -84,4 +84,37 @@ const appointmentSchema = new mongoose.Schema({
       }
 })
 
+// Enhanced appointment model with waiting time calculations
+// models/appointmentSchema.js additions
+
+// Add fields for time tracking
+appointmentSchema.add({
+  scheduledTime: {
+    type: String,  // Format: "HH:MM" in 24-hour
+    required: true
+  },
+  checkInTime: Date,
+  startTime: Date,  // When doctor started the appointment
+  endTime: Date,    // When appointment ended
+  waitingTime: Number,  // In minutes
+  consultationDuration: Number  // In minutes
+});
+
+// Add method to calculate waiting time
+appointmentSchema.methods.recordStart = async function() {
+  this.startTime = new Date();
+  if (this.checkInTime) {
+    this.waitingTime = Math.round((this.startTime - this.checkInTime) / 60000);
+  }
+  await this.save();
+};
+
+appointmentSchema.methods.recordEnd = async function() {
+  this.endTime = new Date();
+  if (this.startTime) {
+    this.consultationDuration = Math.round((this.endTime - this.startTime) / 60000);
+  }
+  await this.save();
+};
+
 export const Appointment = mongoose.model("Appointment", appointmentSchema)
