@@ -30,11 +30,56 @@ import cloudinary from "cloudinary";
 //     });
 // });
 
+// export const patientRegister = catchAsyncError(async (req, res, next) => {
+//   const { firstName, lastName, email, phone, password, confirmPassword, gender, dob } = req.body;
+
+//   if (!firstName || !lastName || !email || !phone || !password || !gender || !dob) {
+//     return next(new ErrorHandler("Please fill all the fields", 400));
+//   }
+
+//   const role = "Patient";
+
+//   let user = await User.findOne({ email });
+//   if (user) {
+//     return next(new ErrorHandler("User already exists", 400));
+//   }
+
+//   user = await User.create({
+//     firstName,
+//     lastName,
+//     email,
+//     phone,
+//     password,
+//     gender,
+//     dob,
+//     role,
+//   });
+
+// //   const token = user.generateJsonWebToken();
+//   generateToken(user, "User registered successfully", 201, res);
+// //   res.status(201).json({
+// //     success: true,
+// //     message: "User registered successfully",
+// //     token,
+// //     user: {
+// //       id: user._id,
+// //       firstName: user.firstName,
+// //       lastName: user.lastName,
+// //       email: user.email,
+// //       role: user.role,
+// //     },
+// //   });
+// });
+
 export const patientRegister = catchAsyncError(async (req, res, next) => {
   const { firstName, lastName, email, phone, password, confirmPassword, gender, dob } = req.body;
 
   if (!firstName || !lastName || !email || !phone || !password || !confirmPassword || !gender || !dob) {
     return next(new ErrorHandler("Please fill all the fields", 400));
+  }
+
+  if (password !== confirmPassword) {
+    return next(new ErrorHandler("Passwords do not match", 400));
   }
 
   const role = "Patient";
@@ -50,26 +95,12 @@ export const patientRegister = catchAsyncError(async (req, res, next) => {
     email,
     phone,
     password,
-    confirmPassword,
     gender,
     dob,
     role,
   });
 
-//   const token = user.generateJsonWebToken();
   generateToken(user, "User registered successfully", 201, res);
-//   res.status(201).json({
-//     success: true,
-//     message: "User registered successfully",
-//     token,
-//     user: {
-//       id: user._id,
-//       firstName: user.firstName,
-//       lastName: user.lastName,
-//       email: user.email,
-//       role: user.role,
-//     },
-//   });
 });
 
 
@@ -103,11 +134,10 @@ export const addNewAdmin = catchAsyncError(async (req,res,next) => {
 		email,
 		phone,
 		password,
-		confirmPassword,
 		gender,
 		dob
 	} = req.body;
-	if (!firstName || !lastName || !email || !phone || !password || !confirmPassword || !gender || !dob) {
+	if (!firstName || !lastName || !email || !phone || !password  || !gender || !dob) {
     return next(new ErrorHandler("Please fill all the fields", 400));
   	}
 	const isRegistered = await User.findOne({email});
@@ -177,7 +207,7 @@ export const addNewDoctor = catchAsyncError(async (req,res,next) => {
 		return next(new ErrorHandler("Doctor avatar required", 400));
 	}
 	const {docAvatar} = req.files;
-	const allowedFormats = ["/image/jpeg", "/image/png", "/image/jpg", "/image/webp"];
+	const allowedFormats = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 	if (!allowedFormats.includes(docAvatar.mimetype)){
 		return next(new ErrorHandler("Invalid file format", 400));
 	}

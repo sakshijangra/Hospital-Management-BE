@@ -52,20 +52,7 @@ const userSchema = new mongoose.Schema({
     maxLength: [20, "Password must be at most 20 characters"],
     select: false,
   },
-  confirmPassword: {
-    type: String,
-    required: [true, 'Please confirm your password'],
-    minLength: [6, "Confirm Password must be at least 6 characters"],
-    maxLength: [20, "Confirm Password must be at most 20 characters"],
-    select: false,
-    validate: {
-      validator: function(value) {
-        // this only works on CREATE and SAVE
-        return value === this.password;
-      },
-      message: "Passwords do not match"
-    }
-  },
+  
   role: {
     type: String,
     required: [true, "Please provide your role"],

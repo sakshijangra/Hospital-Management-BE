@@ -4,9 +4,9 @@ import {Appointment} from "../models/appointmentSchema.js";
 import {User} from "../models/userSchema.js";
 
 export const postAppointment = catchAsyncError(async (req,res,next) => {
-    const {firstName, lastName, email, phone, dob, gender, appointmentDate, department,doctor_firstName, doctor_lastName,hasVisited, address, scheduledTime} = req.body;
+    const {firstName, lastName, email, phone,  gender, appointmentDate, department,doctor_firstName, doctor_lastName,hasVisited, address} = req.body;
 
-    if(!firstName ||!lastName ||!email || !phone ||!dob ||!gender || !appointmentDate ||!department || !doctor_firstName || !doctor_lastName || !address || !scheduledTime){
+    if(!firstName ||!lastName ||!email || !phone ||!gender || !appointmentDate ||!department || !doctor_firstName || !doctor_lastName || !address ){
         return next(new ErrorHandler("Please fill out all the fields",400));
     }
     const isConflict = await User.find({
@@ -28,7 +28,6 @@ export const postAppointment = catchAsyncError(async (req,res,next) => {
         lastName, 
         email, 
         phone, 
-        dob, 
         gender, 
         appointmentDate, 
         department, 
@@ -40,7 +39,6 @@ export const postAppointment = catchAsyncError(async (req,res,next) => {
         address, 
         doctorId, 
         patientId,
-        scheduledTime
     })
     res.status(200).json({
         success : true,
