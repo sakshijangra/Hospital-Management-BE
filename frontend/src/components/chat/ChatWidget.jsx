@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 import './ChatWidget.css';
+import { processTextQuery, processImageUpload } from '../../services/chatService';
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,28 +37,22 @@ const ChatWidget = () => {
     setLoading(true);
 
     try {
-      // Create FormData if there's an image
-      const formData = new FormData();
-      formData.append('message', text);
+      let response;
+      
+      // Process based on whether there's an image or text
       if (image) {
-        formData.append('image', image);
+        response = await processImageUpload(image);
+      } else {
+        response = await processTextQuery(text);
       }
-
-      // Send message to backend
-      const response = await axios.post('/api/chat', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
 
       // Add bot response to chat
       const botResponse = {
         id: Date.now() + 1,
-        text: response.data.message,
+        text: response.message,
         sender: 'bot',
         timestamp: new Date(),
-        diseaseInfo: response.data.diseaseInfo || null,
-        image: response.data.image || null,
+        diseaseInfo: response.diseaseInfo || null,
       };
 
       setMessages((prev) => [...prev, botResponse]);

@@ -2,13 +2,24 @@ import React from 'react';
 import DiseaseCard from './DiseaseCard';
 
 const ChatMessages = ({ messages, loading, messagesEndRef }) => {
+  const renderSuggestions = () => (
+    <div className="chat-suggestions">
+      <p>Try asking:</p>
+      <div className="suggestion-buttons">
+        <button onClick={() => document.querySelector('.message-input').value = "What are the symptoms of COVID-19?"}>COVID-19 symptoms</button>
+        <button onClick={() => document.querySelector('.message-input').value = "How is diabetes treated?"}>Diabetes treatments</button>
+        <button onClick={() => document.querySelector('.message-input').value = "What causes hypertension?"}>Hypertension causes</button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="chat-messages">
       {messages.length === 0 && (
         <div className="chat-welcome">
           <h3>Welcome to Medical Assistant</h3>
-          <p>Ask me about any medical condition or disease, and I'll provide information about symptoms, treatments, and more.</p>
-          <p>You can also upload images for better assistance.</p>
+          <p>Ask me about any medical condition or upload an image for analysis. I can provide information about symptoms, treatments, and preventive measures.</p>
+          {renderSuggestions()}
         </div>
       )}
 

@@ -7,7 +7,9 @@ const DiseaseCard = ({ diseaseInfo }) => {
     setExpanded(!expanded);
   };
   
-  const { name, description, symptoms, causes, treatments, preventions, image } = diseaseInfo;
+  const { name, description, symptoms, causes, treatments, preventions, image } = diseaseInfo || {};
+  
+  if (!diseaseInfo) return null;
   
   return (
     <div className="disease-card">
@@ -18,16 +20,17 @@ const DiseaseCard = ({ diseaseInfo }) => {
         </span>
       </div>
       
-      {(expanded || !expanded) && (
-        <div className="disease-brief">
-          {image && (
-            <div className="disease-image">
-              <img src={image} alt={name} />
-            </div>
-          )}
-          <p>{description}</p>
-        </div>
-      )}
+      <div className="disease-brief">
+        {image && (
+          <div className="disease-image">
+            <img src={image} alt={name} onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
+            }} />
+          </div>
+        )}
+        <p>{description}</p>
+      </div>
       
       {expanded && (
         <div className="disease-details">
