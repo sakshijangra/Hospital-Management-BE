@@ -1,100 +1,161 @@
-import React, { useState, useEffect, useRef } from 'react';
-import ChatHeader from './ChatHeader';
-import ChatMessages from './ChatMessages';
-import ChatInput from './ChatInput';
-import './ChatWidget.css';
-import { processTextQuery, processImageUpload } from '../../services/chatService';
+import { useState, useEffect, useRef } from 'react'
+import { Send, X, MessageSquare } from 'lucide-react'
 
-const ChatWidget = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef(null);
+const initialMessage = [
+  {
+    id: 1,
+    text: 'Hello! How can I help you today?',
+    sender: 'bot',
+    timestamp: new Date().toISOString(),
+  },
+]
 
-  const toggleChat = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+export default function ChatWidget() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [messages, setMessages] = useState(initialMessage)
+  const [newMessage, setNewMessage] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const messageEndRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    scrollToBottom()
+  }, [messages])
 
-  const handleSendMessage = async (text, image = null) => {
-    // Add user message to chat
-    const userMessage = {
-      id: Date.now(),
-      text,
-      sender: 'user',
-      timestamp: new Date(),
-      image: image ? URL.createObjectURL(image) : null,
-    };
-    
-    setMessages((prev) => [...prev, userMessage]);
-    setLoading(true);
-
-    try {
-      let response;
-      
-      // Process based on whether there's an image or text
-      if (image) {
-        response = await processImageUpload(image);
-      } else {
-        response = await processTextQuery(text);
-      }
-
-      // Add bot response to chat
-      const botResponse = {
-        id: Date.now() + 1,
-        text: response.message,
-        sender: 'bot',
-        timestamp: new Date(),
-        diseaseInfo: response.diseaseInfo || null,
-      };
-
-      setMessages((prev) => [...prev, botResponse]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Add error message
-      const errorMessage = {
-        id: Date.now() + 1,
-        text: 'Sorry, I encountered an error processing your request. Please try again.',
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus()
     }
-  };
+  }, [isOpen])
+
+  const scrollToBottom = () => {
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const toggleChat = () => {
+    setIsOpen(!isOpen)
+  }
+
+  const handleInputChange = (e) => {
+    setNewMessage(e.target.value)
+  }
+
+  const sendMessage = () => {
+    if (newMessage.trim() === '') return
+
+    const userMessage = {
+      id: messages.length + 1,
+      text: newMessage,
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+    }
+
+    setMessages([...messages, userMessage])
+    setNewMessage('')
+
+    // Simulate bot response
+    setIsTyping(true)
+    setTimeout(() => {
+      const botMessage = {
+        id: messages.length + 2,
+        text: "Thanks for your message! This is a simulated response.",
+        sender: 'bot',
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prevMessages) => [...prevMessages, botMessage])
+      setIsTyping(false)
+    }, 1500)
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
 
   return (
     <div className="chat-widget-container">
-      {!isOpen && (
-        <button className="chat-widget-button" onClick={toggleChat}>
-          <span className="chat-widget-icon">💬</span>
-          <span>Medical Assistant</span>
-        </button>
-      )}
-
       {isOpen && (
-        <div className="chat-widget-popup">
-          <ChatHeader toggleChat={toggleChat} />
-          <ChatMessages 
-            messages={messages} 
-            loading={loading} 
-            messagesEndRef={messagesEndRef} 
-          />
-          <ChatInput onSendMessage={handleSendMessage} />
+        <div className="chat-window">
+          <div className="chat-header">
+            <h3 className="chat-title">Medical Assistant</h3>
+            <button onClick={toggleChat} className="close-button" aria-label="Close chat">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="messages-container" aria-live="polite">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`message ${message.sender === 'user' ? 'message-user' : 'message-bot'}`}
+              >
+                <div
+                  className={`message-bubble ${
+                    message.sender === 'user' ? 'message-bubble-user' : 'message-bubble-bot'
+                  }`}
+                >
+                  {message.text}
+                </div>
+                <div
+                  className={`message-time ${
+                    message.sender === 'user' ? 'time-right' : 'time-left'
+                  }`}
+                >
+                  {formatTime(message.timestamp)}
+                </div>
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="typing-indicator">
+                <div className="typing-bubble">
+                  <div className="dots-container">
+                    <div className="dot" />
+                    <div className="dot" />
+                    <div className="dot" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messageEndRef} />
+          </div>
+
+          <div className="input-container">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              ref={inputRef}
+              placeholder="Type a message..."
+              className="message-input"
+            />
+            <button
+              onClick={sendMessage}
+              className="send-button"
+              disabled={newMessage.trim() === ''}
+            >
+              <Send size={18} />
+            </button>
+          </div>
         </div>
       )}
-    </div>
-  );
-};
 
-export default ChatWidget;
+      <button
+        onClick={toggleChat}
+        className={`toggle-button ${isOpen ? 'hidden' : ''}`}
+        aria-label="Open chat"
+      >
+        <MessageSquare size={24} />
+      </button>
+    </div>
+  )
+}
