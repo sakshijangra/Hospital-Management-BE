@@ -1,37 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, MessageSquare } from 'lucide-react';
-import './ChatWidget.css'; // Make sure to import the CSS
+import { Send, X, MessageSquare, Upload } from 'lucide-react';
+import './ChatWidget.css';
+import DiseaseCard from './DiseaseCard';
 
-const initialMessage = [
-  {
-    id: 1,
-    text: 'Hello! Welcome to ZeeCare Medical Institute. How can I assist you today?',
-    sender: 'bot',
-    timestamp: new Date().toISOString(),
-  },
-];
+const initialMessage = {
+  id: 1,
+  text: 'Hello! I\'m your MediCare assistant. How can I help you with your medical questions today?',
+  sender: 'bot',
+  timestamp: new Date().toISOString(),
+};
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState(initialMessage);
+  const [messages, setMessages] = useState([initialMessage]);
   const [newMessage, setNewMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const messageEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // Auto-open the chat widget when component mounts
+  // Auto-open the chat widget with a delay
   useEffect(() => {
-    // Delay opening by 2 seconds
     const timer = setTimeout(() => {
       setIsOpen(true);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Focus input when chat opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
@@ -50,41 +53,111 @@ export default function ChatWidget() {
     setNewMessage(e.target.value);
   };
 
-  const sendMessage = () => {
-    if (newMessage.trim() === '') return;
+  const handleImageUpload = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Check file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+      
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
+  const clearImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const sendMessage = async () => {
+    if (newMessage.trim() === '' && !image) return;
+
+    // Add user message to chat
     const userMessage = {
-      id: messages.length + 1,
+      id: Date.now(),
       text: newMessage,
+      image: imagePreview,
       sender: 'user',
       timestamp: new Date().toISOString(),
     };
 
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setNewMessage('');
+    setIsLoading(true);
 
-    // Simulate bot response
-    setIsTyping(true);
-    setTimeout(() => {
-      const botResponses = [
-        "Thanks for your message! Our medical team will review your inquiry.",
-        "Good question! I recommend booking an appointment to discuss this with our specialists.",
-        "I understand your concern. ZeeCare offers comprehensive care for this condition.",
-        "We have several specialists who can help with this issue. Would you like to schedule an appointment?",
-      ];
+    // If there's an image, we'd handle it differently
+    if (image) {
+      // In a real implementation, you'd upload the image to a server
+      // and get analysis back. For now, we'll simulate a response.
+      setTimeout(() => {
+        const botResponse = {
+          id: Date.now() + 1,
+          text: "I've analyzed the image but currently can only provide general information. Could you describe the symptoms or condition you're concerned about?",
+          sender: 'bot',
+          timestamp: new Date().toISOString(),
+        };
+        
+        setMessages(prev => [...prev, botResponse]);
+        setIsLoading(false);
+        clearImage();
+      }, 2000);
       
-      const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
+      return;
+    }
+
+    try {
+      // Send query to backend
+      const response = await fetch('http://127.0.0.1:5000/api/medical-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: newMessage }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Server error');
+      }
+
+      const data = await response.json();
       
-      const botMessage = {
-        id: messages.length + 2,
-        text: randomResponse,
+      // Create bot response with the data we received
+      const botResponse = {
+        id: Date.now() + 1,
+        text: data.message,
+        sender: 'bot',
+        timestamp: new Date().toISOString(),
+        diseaseInfo: data.diseaseInfo,
+        sources: data.sources
+      };
+      
+      setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Error fetching response:', error);
+      
+      // Fallback response in case of error
+      const errorResponse = {
+        id: Date.now() + 1,
+        text: "I'm having trouble connecting to my knowledge base right now. Please try again later or contact support if this persists.",
         sender: 'bot',
         timestamp: new Date().toISOString(),
       };
       
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
-      setIsTyping(false);
-    }, 1500);
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -99,6 +172,21 @@ export default function ChatWidget() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Suggested medical queries
+  const suggestions = [
+    "What are symptoms of diabetes?",
+    "How is hypertension treated?",
+    "What causes migraines?",
+    "Tell me about COVID-19"
+  ];
+
+  const setQueryFromSuggestion = (suggestion) => {
+    setNewMessage(suggestion);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
   return (
     <div className="chat-widget-container">
       {isOpen && (
@@ -106,7 +194,7 @@ export default function ChatWidget() {
           <div className="chat-header">
             <div className="chat-title">
               <span className="chat-avatar">🩺</span>
-              <h3>ZeeCare Assistant</h3>
+              <h3>Medical Assistant</h3>
             </div>
             <button onClick={toggleChat} className="close-button" aria-label="Close chat">
               <X size={20} />
@@ -125,6 +213,22 @@ export default function ChatWidget() {
                   }`}
                 >
                   {message.text}
+                  
+                  {message.image && (
+                    <div className="message-image">
+                      <img src={message.image} alt="Uploaded" />
+                    </div>
+                  )}
+                  
+                  {message.diseaseInfo && Object.keys(message.diseaseInfo).length > 0 && (
+                    <DiseaseCard diseaseInfo={message.diseaseInfo} />
+                  )}
+                  
+                  {message.sources && message.sources.length > 0 && (
+                    <div className="message-sources">
+                      <small>Sources: {message.sources.length} documents referenced</small>
+                    </div>
+                  )}
                 </div>
                 <div
                   className={`message-time ${
@@ -136,7 +240,25 @@ export default function ChatWidget() {
               </div>
             ))}
 
-            {isTyping && (
+            {/* Display suggestions if it's a new conversation */}
+            {messages.length === 1 && (
+              <div className="suggestions">
+                <p>Try asking about:</p>
+                <div className="suggestion-buttons">
+                  {suggestions.map((suggestion, index) => (
+                    <button 
+                      key={index} 
+                      onClick={() => setQueryFromSuggestion(suggestion)}
+                      className="suggestion-button"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isLoading && (
               <div className="typing-indicator">
                 <div className="typing-bubble">
                   <div className="dots-container">
@@ -151,20 +273,42 @@ export default function ChatWidget() {
             <div ref={messageEndRef} />
           </div>
 
+          {imagePreview && (
+            <div className="image-preview-container">
+              <img src={imagePreview} alt="Preview" className="image-preview" />
+              <button onClick={clearImage} className="clear-image-button">
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
           <div className="input-container">
-            <input
-              type="text"
+            <textarea
               value={newMessage}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               ref={inputRef}
-              placeholder="Ask about our services..."
+              placeholder="Ask a medical question..."
               className="message-input"
+              rows={1}
             />
+            
+            <label className="upload-button" htmlFor="image-upload">
+              <Upload size={18} />
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+              />
+            </label>
+            
             <button
               onClick={sendMessage}
               className="send-button"
-              disabled={newMessage.trim() === ''}
+              disabled={newMessage.trim() === '' && !image}
             >
               <Send size={18} />
             </button>

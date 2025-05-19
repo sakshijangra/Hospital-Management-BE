@@ -7,71 +7,70 @@ const DiseaseCard = ({ diseaseInfo }) => {
     setExpanded(!expanded);
   };
   
-  const { name, description, symptoms, causes, treatments, preventions, image } = diseaseInfo || {};
+  // Check if diseaseInfo is valid and contains required fields
+  if (!diseaseInfo || !diseaseInfo.name) {
+    return null;
+  }
   
-  if (!diseaseInfo) return null;
+  const { name, description, symptoms, causes, treatments, preventions } = diseaseInfo;
+  
+  // Ensure arrays exist
+  const symptomsList = symptoms || [];
+  const causesList = causes || [];
+  const treatmentsList = treatments || [];
+  const preventionsList = preventions || [];
   
   return (
     <div className="disease-card">
       <div className="disease-header" onClick={toggleExpand}>
-        <h3>{name}</h3>
-        <span className={`expand-icon ${expanded ? 'expanded' : ''}`}>
-          {expanded ? '▼' : '▶'}
-        </span>
+        <h4>{name}</h4>
+        <span className="expand-icon">{expanded ? '▼' : '▶'}</span>
       </div>
       
-      <div className="disease-brief">
-        {image && (
-          <div className="disease-image">
-            <img src={image} alt={name} onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "https://via.placeholder.com/80x80?text=No+Image";
-            }} />
-          </div>
-        )}
+      <div className="disease-description">
         <p>{description}</p>
       </div>
       
       {expanded && (
         <div className="disease-details">
-          {symptoms && symptoms.length > 0 && (
-            <div className="disease-section">
-              <h4>Symptoms:</h4>
+          {symptomsList.length > 0 && (
+            <div className="detail-section">
+              <h5>Symptoms</h5>
               <ul>
-                {symptoms.map((symptom, index) => (
+                {symptomsList.map((symptom, index) => (
                   <li key={index}>{symptom}</li>
                 ))}
               </ul>
             </div>
           )}
           
-          {causes && causes.length > 0 && (
-            <div className="disease-section">
-              <h4>Causes:</h4>
+          {causesList.length > 0 && (
+            <div className="detail-section">
+              <h5>Causes</h5>
               <ul>
-                {causes.map((cause, index) => (
+                {causesList.map((cause, index) => (
                   <li key={index}>{cause}</li>
                 ))}
               </ul>
             </div>
           )}
           
-          {treatments && treatments.length > 0 && (
-            <div className="disease-section">
-              <h4>Treatments:</h4>
+          {treatmentsList.length > 0 && (
+            <div className="detail-section">
+              <h5>Treatments</h5>
               <ul>
-                {treatments.map((treatment, index) => (
+                {treatmentsList.map((treatment, index) => (
                   <li key={index}>{treatment}</li>
                 ))}
               </ul>
             </div>
           )}
           
-          {preventions && preventions.length > 0 && (
-            <div className="disease-section">
-              <h4>Prevention:</h4>
+          {preventionsList.length > 0 && (
+            <div className="detail-section">
+              <h5>Prevention</h5>
               <ul>
-                {preventions.map((prevention, index) => (
+                {preventionsList.map((prevention, index) => (
                   <li key={index}>{prevention}</li>
                 ))}
               </ul>
